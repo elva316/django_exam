@@ -77,27 +77,25 @@ class User(models.Model):
 
 
 class appointManager(models.Manager):
-    def appointval(self, postData, id):
+    def appointval(self, postdata, id):
         errors = []
         # print str(datetime.today()).split()[1]-> to see just the time in datetime
-        print postData["time"]
         print datetime.now().strftime("%H:%M")
-        if postData['date']:
-            if not postData["date"] >= unicode(date.today()):
+        if not postdata['date']:
+            errors.append("Date, time, and task can not be empty!")
+        elif postdata['date']:
+            if not postdata["date"] >= unicode(date.today()):
                 errors.append("Date must be set in future!")
-            if postdata["date_birth"] == "" or len(postData["date"]) < 1:
+            if len(postdata["date"]) < 1:
                 errors.append("Date field can not be empty")
-            print "got to appointment post Data:", postData['date']
-
-
-        if len(Appointment.objects.filter(date = postData['date'] ,time= postData['time'])) > 0:
+            print "got to appointment post Data:", postdata['date']
+        if len(Appointment.objects.filter(date = postdata['date'] ,time= postdata['time'])) > 0:
             errors.append("Can Not create an appointment on existing date and time")
-        if len(postData['task'])<2:
+        if len(postdata['task'])<2:
             errors.append("Please insert take, must be more than 2 characters")
-
         if len(errors)==0:
-            # received_datetime = datetime.strptime(postData['time'], '%Y-%m-%d %H:%M:%S')
-            makeappoint= Appointment.objects.create(user=User.objects.get(id=id), task= postData['task'],date= str(postData['date']),time= postData['time'])
+            makeappoint= Appointment.objects.create(user=User.objects.get(id=id), task= postdata['task'],date= str(postdata['date']),time= postdata['time'])
+            print ("ELVA!!!!!!")
             return(True, makeappoint)
         else:
             return(False, errors)
