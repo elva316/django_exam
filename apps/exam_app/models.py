@@ -18,12 +18,6 @@ class UserValidation(models.Manager):
         elif not NAME_REGEX.match(postdata['name']):
             errors.append("User name must only contain alphabet")
 
-        if User.objects.filter(alias=postdata['alias']):
-            errors.append('User name is already registered')
-        elif len(postdata['alias']) <2:
-            errors.append("Alias name must be at least 2 characters")
-        elif not NAME_REGEX.match(postdata['alias']):
-            errors.append("Alias name must only contain alphabet")
 
         if not EMAIL_REGEX.match(postdata['email']):
             errors.append('Email format is incorrect')
@@ -47,7 +41,7 @@ class UserValidation(models.Manager):
             # hash password and salt together
             hashed_pw = bcrypt.hashpw(password, salt)
             # add the new users to database
-            User.objects.create(name=postdata['name'], alias=postdata['alias'],email= postdata['email'], password=hashed_pw, date_birth = postdata['date_birth'])
+            User.objects.create(name=postdata['name'], email= postdata['email'], password=hashed_pw, date_birth = postdata['date_birth'])
             print User.objects.all()
         return errors
     def login(self,postdata):
@@ -69,7 +63,6 @@ class UserValidation(models.Manager):
 
 class User(models.Model):
     name = models.CharField(max_length=45)
-    alias = models.CharField(max_length=45)
     email = models.CharField(max_length=45)
     password = models.CharField(max_length=100)
     date_birth = models.DateField()
@@ -80,4 +73,58 @@ class User(models.Model):
     objects = UserValidation()
 
     def __unicode__(self):
-        return "user_id: " + str(self.id) +", alias: " + self.alias + ", name: " + self.name + ", date_birth: " + str(self.date_birth)
+        return "user_id: " + str(self.id) + ", name: " + self.name + ", date_birth: " + str(self.date_birth)
+
+
+class appointManager(models.Manager):
+    def appointval(self, postData, id):
+        errors = []
+        # print str(datetime.today()).split()[1]-> to see just the time in datetime
+        print postData["time"]
+        print datetime.now().strftime("%H:%M")
+        if postData['date']:
+            if not postData["date"] >= unicode(date.today()):
+                errors.append("Date must be set in future!")
+            if postdata["date_birth"] == "" or len(postData["date"]) < 1:
+                errors.append("Date field can not be empty")
+            print "got to appointment post Data:", postData['date']
+
+
+        if len(Appointment.objects.filter(date = postData['date'] ,time= postData['time'])) > 0:
+            errors.append("Can Not create an appointment on existing date and time")
+        if len(postData['task'])<2:
+            errors.append("Please insert take, must be more than 2 characters")
+
+        if len(errors)==0:
+            # received_datetime = datetime.strptime(postData['time'], '%Y-%m-%d %H:%M:%S')
+            makeappoint= Appointment.objects.create(user=User.objects.get(id=id), task= postData['task'],date= str(postData['date']),time= postData['time'])
+            return(True, makeappoint)
+        else:
+            return(False, errors)
+
+    def edit_appointment(self, postdata, app_id):
+        errors = []
+        print errors
+        # if postdata['edit_date']:
+        if not postdata["edit_date"] >= unicode(date.today()):
+            errors.append("Appointment date can't be in the past!")
+            print "appoint date can't be past"
+        if postdata["edit_date"] == "" or len(postdata["edit_tasks"]) < 1:
+            errors.append("All fields must be filled out!")
+            print "all fields must fill out pop out"
+        if errors == []:
+            update_time= self.filter(id = app_id).update(task = postdata['edit_tasks'], status = postdata['edit_status'], time = postdata['edit_time'], date = postdata['edit_date'])
+
+            return (True, update_time)
+        else:
+            return (False, errors)
+
+class Appointment(models.Model):
+    user= models.ForeignKey(User, related_name="onrecord", blank=True, null=True)
+    task= models.CharField(max_length=255)
+    status= models.CharField(max_length=255)
+    date= models.DateField(blank=True, null=True);
+    time= models.TimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+    objects= appointManager()
